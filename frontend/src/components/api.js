@@ -1,4 +1,9 @@
-const apiBase = import.meta.env.VITE_API_BASE || "http://localhost:4000";
+const defaultApiBase =
+  typeof window !== "undefined"
+    ? `${window.location.protocol}//${window.location.hostname}:4000`
+    : "http://localhost:4000";
+
+const apiBase = import.meta.env.VITE_API_BASE || defaultApiBase;
 
 async function request(path, options = {}) {
   const res = await fetch(`${apiBase}${path}`, {

@@ -1,7 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
-const apiBase = import.meta.env.VITE_API_BASE || "http://localhost:4000";
-const wsBase = import.meta.env.VITE_WS_URL || "ws://localhost:4000/ws";
+const host =
+  typeof window !== "undefined" ? window.location.hostname : "localhost";
+const protocol =
+  typeof window !== "undefined" ? window.location.protocol : "http:";
+const wsProtocol = protocol === "https:" ? "wss:" : "ws:";
+
+const apiBase =
+  import.meta.env.VITE_API_BASE || `${protocol}//${host}:4000`;
+const wsBase = import.meta.env.VITE_WS_URL || `${wsProtocol}//${host}:4000/ws`;
 
 export function useLiveMetrics() {
   const [snapshot, setSnapshot] = useState({

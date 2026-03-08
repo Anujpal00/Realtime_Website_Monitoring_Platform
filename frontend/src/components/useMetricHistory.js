@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 
-const apiBase = import.meta.env.VITE_API_BASE || "http://localhost:4000";
+const defaultApiBase =
+  typeof window !== "undefined"
+    ? `${window.location.protocol}//${window.location.hostname}:4000`
+    : "http://localhost:4000";
+
+const apiBase = import.meta.env.VITE_API_BASE || defaultApiBase;
 
 export function useMetricHistory({ scope, target, metric, rangeMs, refreshMs, refreshKey }) {
   const [data, setData] = useState([]);

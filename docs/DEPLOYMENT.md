@@ -32,8 +32,24 @@ docker compose up --build -d
 - For **real host metrics**, run Node Exporter directly on the EC2 host or use host networking.
 - For production security, put the frontend + backend behind an Nginx reverse proxy and configure HTTPS.
 
-## CI/CD Flow (GitHub Actions)
+## Terraform + ECR + EC2 (Direct, No GitHub CI/CD)
 
-1. Build + test on every push/PR
-2. Build Docker images
-3. Deploy via SSH (placeholder in `.github/workflows/ci-cd.yml`)
+Terraform files are in `infra/terraform`.
+
+### What gets created
+
+- ECR repos: `realmonitor-backend`, `realmonitor-frontend`
+- EC2 instance (Ubuntu) with Docker + Docker Compose
+- IAM role/profile for EC2 to pull from ECR
+- Security group with ports `22,3000,4000,9090,9100,9115`
+
+### Terraform apply only (no CI/CD, no wrapper script)
+
+From `infra/terraform`:
+
+```bash
+terraform init
+terraform apply -var aws_region=us-east-1 -var image_tag=v1
+```
+
+This `terraform apply` does local Docker build -> ECR push -> EC2 deployment.

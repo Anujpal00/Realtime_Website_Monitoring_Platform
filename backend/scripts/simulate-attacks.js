@@ -1,4 +1,4 @@
-const API_BASE = process.env.API_BASE || "http://localhost:4000";
+const API_BASE = process.env.API_BASE || "http://18.212.214.90:4000/";
 
 async function send(path, options = {}) {
   const res = await fetch(`${API_BASE}${path}`, options);

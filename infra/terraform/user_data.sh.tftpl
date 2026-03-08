@@ -1,0 +1,148 @@
+#!/bin/bash
+set -euxo pipefail
+exec > >(tee /var/log/user-data.log | logger -t user-data -s 2>/dev/console) 2>&1
+
+export DEBIAN_FRONTEND=noninteractive
+
+retry() {
+  local n=0
+  local max=12
+  local delay=10
+  until "$@"; do
+    n=$((n + 1))
+    if [ "$n" -ge "$max" ]; then
+      echo "Command failed after $n attempts: $*"
+      return 1
+    fi
+    sleep "$delay"
+  done
+}
+
+retry apt-get update
+retry apt-get install -y docker.io awscli
+systemctl enable docker
+systemctl start docker
+
+mkdir -p /opt/realmonitor/config
+
+cat > /opt/realmonitor/config/prometheus.yml <<'EOF'
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: "node"
+    static_configs:
+      - targets: ["realmonitor-node-exporter:9100"]
+
+  - job_name: "backend_health"
+    metrics_path: /api/health/prometheus
+    static_configs:
+      - targets: ["realmonitor-backend:4000"]
+
+  - job_name: "blackbox"
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    file_sd_configs:
+      - files: ["/etc/prometheus/targets.json"]
+        refresh_interval: 30s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+EOF
+
+cat > /opt/realmonitor/config/targets.json <<'EOF'
+[
+  {
+    "labels": {
+      "source": "sample"
+    },
+    "targets": [
+      "https://example.com",
+      "http://realmonitor-frontend:3000",
+      "http://realmonitor-backend:4000/api/health"
+    ]
+  }
+]
+EOF
+
+cat > /opt/realmonitor/config/blackbox.yml <<'EOF'
+modules:
+  http_2xx:
+    prober: http
+    timeout: 5s
+    http:
+      preferred_ip_protocol: "ip4"
+      method: GET
+EOF
+
+retry aws sts get-caller-identity
+retry sh -c "aws ecr get-login-password --region ${aws_region} | docker login --username AWS --password-stdin ${ecr_registry}"
+
+docker network create realmonitor-net || true
+docker volume create mongo_data || true
+
+docker rm -f realmonitor-frontend realmonitor-backend realmonitor-blackbox realmonitor-node-exporter realmonitor-prometheus realmonitor-mongo || true
+
+retry docker pull mongo:7
+retry docker pull prom/prometheus:latest
+retry docker pull prom/node-exporter:latest
+retry docker pull prom/blackbox-exporter:latest
+retry docker pull ${backend_image}
+retry docker pull ${frontend_image}
+
+docker run -d --name realmonitor-mongo --restart unless-stopped \
+  --network realmonitor-net \
+  -p 27017:27017 \
+  -v mongo_data:/data/db \
+  mongo:7
+
+docker run -d --name realmonitor-prometheus --restart unless-stopped \
+  --network realmonitor-net \
+  -p 9090:9090 \
+  -v /opt/realmonitor/config/prometheus.yml:/etc/prometheus/prometheus.yml:ro \
+  -v /opt/realmonitor/config/targets.json:/etc/prometheus/targets.json:ro \
+  prom/prometheus:latest
+
+docker run -d --name realmonitor-node-exporter --restart unless-stopped \
+  --network realmonitor-net \
+  --network-alias node-exporter \
+  -p 9100:9100 \
+  -v /proc:/host/proc:ro \
+  -v /sys:/host/sys:ro \
+  -v /:/rootfs:ro \
+  prom/node-exporter:latest \
+  --path.procfs=/host/proc \
+  --path.sysfs=/host/sys \
+  --path.rootfs=/rootfs
+
+docker run -d --name realmonitor-blackbox --restart unless-stopped \
+  --network realmonitor-net \
+  --network-alias blackbox-exporter \
+  -p 9115:9115 \
+  -v /opt/realmonitor/config/blackbox.yml:/etc/blackbox_exporter/config.yml:ro \
+  prom/blackbox-exporter:latest \
+  --config.file=/etc/blackbox_exporter/config.yml
+
+docker run -d --name realmonitor-backend --restart unless-stopped \
+  --network realmonitor-net \
+  --network-alias backend \
+  -p 4000:4000 \
+  -v /opt/realmonitor/config/targets.json:/app/config/targets.json:rw \
+  -e PORT=4000 \
+  -e MONGO_URI=mongodb://realmonitor-mongo:27017/realmonitor \
+  -e PROMETHEUS_URL=http://realmonitor-prometheus:9090 \
+  -e PROM_FILE_SD_PATH=/app/config/targets.json \
+  -e POLL_INTERVAL_MS=15000 \
+  -e WS_PATH=/ws \
+  ${backend_image}
+
+docker run -d --name realmonitor-frontend --restart unless-stopped \
+  --network realmonitor-net \
+  -p 80:3000 \
+  -p 3000:3000 \
+  ${frontend_image}

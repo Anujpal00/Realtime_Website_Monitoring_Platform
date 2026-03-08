@@ -1,4 +1,4 @@
-const API_BASE = process.env.API_BASE || "http://localhost:4000";
+const API_BASE = process.env.API_BASE || "http://18.212.214.90:4000/";
 const ATTEMPTS = Number(process.env.ATTEMPTS || 15);
 const DELAY_MS = Number(process.env.DELAY_MS || 150);
 
