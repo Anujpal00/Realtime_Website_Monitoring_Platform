@@ -1,0 +1,12 @@
+[
+  {
+    "targets": [
+      "https://example.com",
+      "http://192.168.56.1:5173/",
+      "https://github.com/"
+    ],
+    "labels": {
+      "job": "blackbox"
+    }
+  }
+]

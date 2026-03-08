@@ -1,0 +1,120 @@
+{
+  "info": {
+    "name": "RealMonitor Security Monitoring",
+    "_postman_id": "bde2633d-5708-4dcf-b26a-3bb0da8b7308",
+    "description": "Sample attack traffic for security detection module",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "SQL Injection Probe",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"query\": \"' OR 1=1 --\",\n  \"extra\": \"UNION SELECT * FROM users\"\n}"
+        },
+        "url": {
+          "raw": "{{apiBase}}/api/test/search",
+          "host": [
+            "{{apiBase}}"
+          ],
+          "path": [
+            "api",
+            "test",
+            "search"
+          ]
+        }
+      }
+    },
+    {
+      "name": "XSS Probe",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"comment\": \"<script>alert('xss')</script>\",\n  \"image\": \"<img src=x onerror=alert(1)>\"\n}"
+        },
+        "url": {
+          "raw": "{{apiBase}}/api/test/comment",
+          "host": [
+            "{{apiBase}}"
+          ],
+          "path": [
+            "api",
+            "test",
+            "comment"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Brute Force Login Attempt",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"wrong-password\"\n}"
+        },
+        "url": {
+          "raw": "{{apiBase}}/api/auth/login",
+          "host": [
+            "{{apiBase}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "login"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Security Overview",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{apiBase}}/api/security/overview?rangeMs=3600000",
+          "host": [
+            "{{apiBase}}"
+          ],
+          "path": [
+            "api",
+            "security",
+            "overview"
+          ],
+          "query": [
+            {
+              "key": "rangeMs",
+              "value": "3600000"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "apiBase",
+      "value": "http://localhost:4000"
+    }
+  ]
+}

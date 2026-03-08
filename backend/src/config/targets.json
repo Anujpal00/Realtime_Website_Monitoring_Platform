@@ -1,0 +1,37 @@
+{
+  "nodes": [
+    {
+      "name": "owned-server-1",
+      "instance": "node-exporter:9100",
+      "job": "node"
+    }
+  ],
+  "websites": [
+    {
+      "name": "OpenAI",
+      "url": "https://api.openai.com/health",
+      "probeUrl": "https://api.openai.com/health",
+      "type": "uptime+latency",
+      "timeoutSeconds": 5,
+      "paused": false,
+      "thresholds": {
+        "alertsEnabled": true,
+        "latencyWarnMs": 500,
+        "downCritical": true
+      }
+    },
+    {
+      "name": "Example",
+      "url": "https://example.com",
+      "probeUrl": "https://example.com",
+      "type": "uptime+latency",
+      "timeoutSeconds": 5,
+      "paused": false,
+      "thresholds": {
+        "alertsEnabled": true,
+        "latencyWarnMs": 500,
+        "downCritical": true
+      }
+    }
+  ]
+}

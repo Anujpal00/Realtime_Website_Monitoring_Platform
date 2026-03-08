@@ -1,0 +1,5 @@
+{
+  "alertsEnabled": true,
+  "latencyWarnMs": 500,
+  "downCritical": true
+}
